@@ -1,37 +1,43 @@
-##Windows AWS RDP Connections
+# Windows AWS RDP Connections
 
-####Back Story
-My my new role I found that I often have several RDP connections open to any number of environments at any given time. I wanted to try and simplify this process. 
-As well as give me less reasons to open up AWS console. 
+## Setup
 
-###Prep Work 
-There is one small part that I've not found a great solution to just yet, but it's setting up the RDP conncetions. 
+You will need to create an RDP connection, ensure to name it RDP with the name of your AWS_Profile and save it locally. 
 
-On line 201 I currently have a directory which will need to be changed and setup for yourself. At the moment I point it to a directory where I have RDP files which contain the username and password for the required environment.
-
-You will need to make sure that you've got your RDP files setup as you'd expect as well as making sure you have a username and password in there. We populate the location and port within line 201 so this shouldn't need to be changed.
-
-Ensure that you've got everything setup for AWS System Manager as well. 
-
-###How to run
-You can run this tool in several ways: 
+Look for the line: 
 
 ```
- Load it into your faviourte terminal (Obvioulsy Windows Terminal)
-    . .\RDPConnection.ps1
-
- Run it from your editor such as VSCode
-
- I prefer to make it a part of my Windows Terminal Profile so it's always accessible. 
+mstsc "G:\Documents\Development\RDP Sessions\AWS\RDP_$($ENV:AWS_Profile).rdp" /v:localhost:$PortToUse
 ```
-Once you've loaded the code into your terminal then we can start with the following command: 
 
-__Start-AWS || SAWS__ (as the alias to Start-AWS, I just wanted to make it a little faster to access as well as keeping the naming convention of PowerShell).
+Replace it with your save location: 
 
-__SAWS -AWSProfile ProfileName -SearchTerm SERVERName__
+```
+mstsc "C:\SavedLocation\RDP_$($ENV:AWS_Profile).rdp" /v:localhost:$PortToUse
+```
 
-This will then go and fetch back all the servers within that AWSProfile as well as limit it to what you've searched for. 
+## How to
+PowerShell:
+<small>Navigate to the save location of your script and import the tooling</small>
+```
+. .\AWSRDPConnection.ps1
+```
 
-Once the list has been returned you'll be able to quickly glance and see the servers which are online or offline. 
 
-You can then put in the number to the server you wish to connect to. It will then attempt to launch the RPD connection to that server.
+## Commands
+
+**Start-AWS || SAWS** 
+- The full function name is **Start-AWS** but can be used by its alias **SAWS**
+
+**SAWS -AWSProfile ProfileName -SearchTerm SERVERName**
+
+| Command | Help | 
+| - | - |
+| AWSProfile | This is your AWS Profile Name |
+| SearchTerm | A search input for the server you're after. <br />  - Can be left blank for all servers. <br /> - Can be a partial Name to wildcard the server you're after. | 
+
+## Results
+When you've ran the search you'd expect the following results.
+
+## Login
+Type in the associated server number ID and it will start to launch into your server instance.
