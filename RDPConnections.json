@@ -1,0 +1,14 @@
+{
+  "connections": {
+    "abcdef": {
+      "id": "10",
+      "InstanceID": "abcdef",
+      "port": "1234"
+    },
+    "abcdefefd": {
+      "id": "10",
+      "InstanceID": "abcdefefd",
+      "port": "1234"
+    }
+  }
+}

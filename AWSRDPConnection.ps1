@@ -202,6 +202,41 @@ function Start-RDP {
     mstsc "G:\Documents\Development\RDP Sessions\AWS\RDP_$($ENV:AWS_Profile).rdp" /v:localhost:$PortToUse
 }
 
+function New-RDPConnectionFile { 
+@"
+{
+    "connections": {}
+}
+"@ | Out-File .\RDPConnections.json
+    return
+}
+
+function Write-RDPConnectionFile { 
+    Param (
+        [string]$Port,
+        [string]$InstanceId
+    )
+
+    if(Test-Path ".\RDPConnections.json") {
+        Write-Host "data going in  $($port) : $($InstanceId)"
+        $CurrentLog = Get-Content .\RDPConnections.json | ConvertFrom-Json
+
+    $i = @"
+    {
+        "id":"10",
+        "InstanceID":"$($InstanceId)",
+        "port":"$($Port)"
+    }
+"@ | ConvertFrom-Json
+
+        $CurrentLog.connections | Add-Member -name $($InstanceId) -value ($i)  -MemberType NoteProperty
+        $CurrentLog | ConvertTo-Json | Out-File .\RDPConnections.json
+    } else {
+        New-RDPConnectionFile
+        Write-RDPConnectionFile -Port $Port -InstanceId $InstanceId
+    }
+}
+
 function Get-Colour { 
     $ColourList = @{
         1 = "DarkBlue"
