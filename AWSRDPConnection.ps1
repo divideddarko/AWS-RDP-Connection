@@ -286,8 +286,6 @@ function Get-Colour {
         12 = "Yellow"
     }
 
-    $Number = Get-Random -Maximum 12 -Minimum 1
-    $ColourValue = ($ColourList.GetEnumerator() | Where-Object {$_.Key -eq $number}).Value
-
-    return $ColourValue
+    $Number = Get-Random -Maximum $ColourList.Count -Minimum 1
+    return (($ColourList.GetEnumerator() | Where-Object {$_.Key -eq $Number}).Value)
 }
