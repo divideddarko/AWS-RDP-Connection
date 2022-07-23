@@ -199,7 +199,7 @@ function Start-RDP {
 }
 
 function New-RDPConnectionFile { 
-    New-Item .\RDPConnections.json
+    New-Item -ItemType File -Name "RDPConnections.json" | Out-Null
 }
 
 function Write-RDPConnectionFile { 
@@ -211,15 +211,26 @@ function Write-RDPConnectionFile {
     if(Test-Path ".\RDPConnections.json") {
         $CurrentConnections = Get-Content .\RDPConnections.json | ConvertFrom-Json
 
+        if ($CurrentConnections.Count -eq 0){
+            $id = 1
+        } elseif ($CurrentConnections.Count -ge 5) {
+            $CurrentConnections += $CurrentConnections | ForEach-Object { 
+                $_.Id = ($_.id - 1)
+            }
+            $CurrentConnections = $CurrentConnections | Where-Object {$_.id -ne "0"}
+            $id = ($CurrentConnections.Count + 1)
+        } else { 
+            $id = ($CurrentConnections.Count + 1)
+        }
+
         $Conn = @()
         $Connection = New-Object psobject
-        $Connection | Add-Member -MemberType NoteProperty -Name "id" -Value "10"
+        $Connection | Add-Member -MemberType NoteProperty -Name "id" -Value "$($id)"
         $Connection | Add-Member -MemberType NoteProperty -Name "Environment" -Value $($ENV:AWS_Profile)
         $Connection | Add-Member -MemberType NoteProperty -Name "InstanceID" -Value "$($InstanceID)"
         $Connection | Add-Member -MemberType NoteProperty -Name "Port" -Value "$($Port)"
         $Connection | Add-Member -MemberType NoteProperty -Name "Connection Time" -Value "$(Get-Date -format "dd/MM/yyyy HH:mm:ss")"
         $Conn += $Connection
-
 
         $CombineLists = @()
         $CombineLists += $CurrentConnections
@@ -239,17 +250,18 @@ function Get-RDPConnectionFile {
     if (Test-Path ".\RDPConnections.json") { 
         $Connections = (Get-Content .\RDPConnections.json) | ConvertFrom-Json
 
-        $Connections | ForEach-Object { 
-            Write-Host "Id: $($_.id) $($_.Environment) Instance $($_.InstanceID) | $($_.Port) | $($_."Connection Time")" -ForegroundColor (Get-Colour)
+        Write-host "ID| InstanceID `t`t | Port | Connection Date"
+        Write-Host "".PadRight((("ID  | InstanceID               | Port | Connection Date      ").Length), '‾')
+
+        $Connections | ForEach-Object {
+            Write-Host "$($_.id)   $($_.InstanceId)    $($_.Port)   $($_."Connection Time")" -ForegroundColor (Get-Colour)
         }
 
         $id = Read-Host "Would you like to connect to a previous connection?"
 
         if ($id) {
-
-            $results = $Connections[$id]
-
-            Start-PreviousRDPConnection -AWSProfile $($results.Environment)  -SelectedSever $($results.InstanceID)
+            $results = $Connections[$id - 1]
+            Start-PreviousRDPConnection -AWSProfile $($results.Environment) -SelectedServer $($results.InstanceId)
         }
     } else { 
         Write-Host "There are no previous connections"
@@ -259,12 +271,16 @@ function Get-RDPConnectionFile {
 function Start-PreviousRDPConnection { 
     Param (
         [string]$AWSProfile,
-        [string]$SelectedSever
+        [string]$SelectedServer
     )
+
+    Write-Host "Attempting to start $($AWSProfile) $($SelectedServer)"
+
     Set-AWSENV -AWSProfile $($AWSProfile)
 
     $PortToUse = Get-Port
     Set-TabTitle -TabTitle "$SelectedServer : $PortToUse 🟢"
+    Write-RDPConnectionFile -Port $PortToUse -InstanceId $SelectedServer
     Start-Job -ScriptBlock $StartSSM -ArgumentList @($($SelectedServer, $PortToUse)) | Out-Null
 
     Start-RDP -PortToUse $PortToUse
