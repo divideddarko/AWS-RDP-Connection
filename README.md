@@ -35,6 +35,7 @@ PowerShell:
 | - | - |
 | AWSProfile | This is your AWS Profile Name |
 | SearchTerm | A search input for the server you're after. <br />  - Can be left blank for all servers. <br /> - Can be a partial Name to wildcard the server you're after. | 
+| PAWS | Shows Previous AWS Connections |
 
 ## Results
 When you've ran the search you'd expect the following results.
