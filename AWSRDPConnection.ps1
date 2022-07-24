@@ -27,6 +27,52 @@ class AWSUsers : System.Management.Automation.IValidateSetValuesGenerator {
     }
 }
 
+if (!(Test-Path Settings.json)) { 
+    New-Item -Type File -Name "Settings.json" | Out-Null
+}
+
+$SCRIPT:Settings = Get-Content Settings.json | ConvertFrom-Json
+
+function Update-PAWS { 
+
+    if (Test-Path .\RDPConnections.json) {
+
+        $CurrentConnections = Get-Content .\RDPConnections.json
+
+        if ($CurrentConnections -match "null"){
+            $id = 1
+        } elseif ($CurrentConnections.Count -ge ($Settings.Previous_Connection_Total)) {
+
+            if($CurrentConnections.Count -gt $Settings.Previous_Connection_Total) { 
+                $CurrentConnections | ForEach-Object { 
+                    if ($_.id -le ($CurrentConnections.Count - $Settings.Previous_Connection_Total)) { 
+                        $_.id = "0"
+                    } 
+                } 
+            }
+
+            $i = 1
+            $CurrentConnections += $CurrentConnections | ForEach-Object { 
+                if ($_.id -ne "0") { 
+                    $_.id = $i
+                    $i++ 
+                }
+            }
+                
+            $CurrentConnections = $CurrentConnections | Where-Object {($_.id -ne "0")}
+            $id = ($CurrentConnections.Count + 1)
+        } else { 
+            $id = ($CurrentConnections.Count + 1)
+        }
+    }
+
+    $CurrentConnections | ConvertTo-Json | Out-File .\RDPConnections.json
+
+    return $id
+}
+
+Update-PAWS
+
 function Start-AWS {
     [Alias("SAWSs")]
     Param (
@@ -208,20 +254,12 @@ function Write-RDPConnectionFile {
         [string]$InstanceId
     )
 
-    if(Test-Path ".\RDPConnections.json") {
-        $CurrentConnections = Get-Content .\RDPConnections.json | ConvertFrom-Json
+    Write-Host "previous connection total: $($Settings.Previous_Connection_Total)"
 
-        if ($CurrentConnections.Count -eq 0){
-            $id = 1
-        } elseif ($CurrentConnections.Count -ge 5) {
-            $CurrentConnections += $CurrentConnections | ForEach-Object { 
-                $_.Id = ($_.id - 1)
-            }
-            $CurrentConnections = $CurrentConnections | Where-Object {$_.id -ne "0"}
-            $id = ($CurrentConnections.Count + 1)
-        } else { 
-            $id = ($CurrentConnections.Count + 1)
-        }
+    if(Test-Path ".\RDPConnections.json") {
+        $id = Update-PAWS
+        
+        $CurrentConnections = Get-Content .\RDPConnections.json | ConvertFrom-Json
 
         $Conn = @()
         $Connection = New-Object psobject
