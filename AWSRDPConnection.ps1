@@ -27,20 +27,15 @@ class AWSUsers : System.Management.Automation.IValidateSetValuesGenerator {
     }
 }
 
-if (!(Test-Path Settings.json)) { 
-    New-Item -Type File -Name "Settings.json" | Out-Null
-}
-
-$SCRIPT:Settings = Get-Content Settings.json | ConvertFrom-Json
+$Settings = Import-Module .\Settings.psm1
 
 function Update-PAWS { 
-
     if (Test-Path .\RDPConnections.json) {
-
         $CurrentConnections = Get-Content .\RDPConnections.json
 
         if ($CurrentConnections -match "null"){
             $id = 1
+
         } elseif ($CurrentConnections.Count -ge ($Settings.Previous_Connection_Total)) {
 
             if($CurrentConnections.Count -gt $Settings.Previous_Connection_Total) { 
@@ -61,17 +56,14 @@ function Update-PAWS {
                 
             $CurrentConnections = $CurrentConnections | Where-Object {($_.id -ne "0")}
             $id = ($CurrentConnections.Count + 1)
+            $CurrentConnections | ConvertTo-Json | Out-File .\RDPConnections.json
+
         } else { 
             $id = ($CurrentConnections.Count + 1)
         }
     }
-
-    $CurrentConnections | ConvertTo-Json | Out-File .\RDPConnections.json
-
     return $id
 }
-
-Update-PAWS
 
 function Start-AWS {
     [Alias("SAWSs")]
@@ -82,7 +74,7 @@ function Start-AWS {
         [Parameter(ParameterSetName = "Search", Position = 1)]
         [String]$SearchTerm
     )
-    
+    Update-PAWS   
     Clear-Host
     Set-TabTitle -TabTitle "Not Connected 🔴"
     Set-AWSENV -AWSProfile $AWSProfile
@@ -286,6 +278,7 @@ function Get-RDPConnectionFile {
     Param()
     
     if (Test-Path ".\RDPConnections.json") { 
+        Update-PAWS
         $Connections = (Get-Content .\RDPConnections.json) | ConvertFrom-Json
 
         Write-host "ID| InstanceID `t`t | Port | Connection Date"
@@ -322,24 +315,4 @@ function Start-PreviousRDPConnection {
     Start-Job -ScriptBlock $StartSSM -ArgumentList @($($SelectedServer, $PortToUse)) | Out-Null
 
     Start-RDP -PortToUse $PortToUse
-}
-
-function Get-Colour { 
-    $ColourList = @{
-        1 = "DarkBlue"
-        2 = "DarkGreen"
-        3 = "DarkCyan"
-        4 = "DarkRed"
-        5 = "DarkMagenta"
-        6 = "DarkYellow"
-        7 = "Blue"
-        8 = "Green"
-        9 = "Cyan"
-        10 = "Red"
-        11 = "Magenta"
-        12 = "Yellow"
-    }
-
-    $Number = Get-Random -Maximum $ColourList.Count -Minimum 1
-    return (($ColourList.GetEnumerator() | Where-Object {$_.Key -eq $Number}).Value)
 }
