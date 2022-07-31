@@ -27,6 +27,44 @@ class AWSUsers : System.Management.Automation.IValidateSetValuesGenerator {
     }
 }
 
+$Settings = Import-Module .\Settings.psm1
+
+function Update-PAWS { 
+    if (Test-Path .\RDPConnections.json) {
+        $CurrentConnections = Get-Content .\RDPConnections.json
+
+        if ($CurrentConnections -match "null"){
+            $id = 1
+
+        } elseif ($CurrentConnections.Count -ge ($Settings.Previous_Connection_Total)) {
+
+            if($CurrentConnections.Count -gt $Settings.Previous_Connection_Total) { 
+                $CurrentConnections | ForEach-Object { 
+                    if ($_.id -le ($CurrentConnections.Count - $Settings.Previous_Connection_Total)) { 
+                        $_.id = "0"
+                    } 
+                } 
+            }
+
+            $i = 1
+            $CurrentConnections += $CurrentConnections | ForEach-Object { 
+                if ($_.id -ne "0") { 
+                    $_.id = $i
+                    $i++ 
+                }
+            }
+                
+            $CurrentConnections = $CurrentConnections | Where-Object {($_.id -ne "0")}
+            $id = ($CurrentConnections.Count + 1)
+            $CurrentConnections | ConvertTo-Json | Out-File .\RDPConnections.json
+
+        } else { 
+            $id = ($CurrentConnections.Count + 1)
+        }
+    }
+    return $id
+}
+
 function Start-AWS {
     [Alias("SAWSs")]
     Param (
@@ -36,7 +74,7 @@ function Start-AWS {
         [Parameter(ParameterSetName = "Search", Position = 1)]
         [String]$SearchTerm
     )
-    
+    Update-PAWS   
     Clear-Host
     Set-TabTitle -TabTitle "Not Connected 🔴"
     Set-AWSENV -AWSProfile $AWSProfile
@@ -208,20 +246,12 @@ function Write-RDPConnectionFile {
         [string]$InstanceId
     )
 
-    if(Test-Path ".\RDPConnections.json") {
-        $CurrentConnections = Get-Content .\RDPConnections.json | ConvertFrom-Json
+    Write-Host "previous connection total: $($Settings.Previous_Connection_Total)"
 
-        if ($CurrentConnections.Count -eq 0){
-            $id = 1
-        } elseif ($CurrentConnections.Count -ge 5) {
-            $CurrentConnections += $CurrentConnections | ForEach-Object { 
-                $_.Id = ($_.id - 1)
-            }
-            $CurrentConnections = $CurrentConnections | Where-Object {$_.id -ne "0"}
-            $id = ($CurrentConnections.Count + 1)
-        } else { 
-            $id = ($CurrentConnections.Count + 1)
-        }
+    if(Test-Path ".\RDPConnections.json") {
+        $id = Update-PAWS
+        
+        $CurrentConnections = Get-Content .\RDPConnections.json | ConvertFrom-Json
 
         $Conn = @()
         $Connection = New-Object psobject
@@ -248,6 +278,7 @@ function Get-RDPConnectionFile {
     Param()
     
     if (Test-Path ".\RDPConnections.json") { 
+        Update-PAWS
         $Connections = (Get-Content .\RDPConnections.json) | ConvertFrom-Json
 
         Write-host "ID| InstanceID `t`t | Port | Connection Date"
@@ -284,24 +315,4 @@ function Start-PreviousRDPConnection {
     Start-Job -ScriptBlock $StartSSM -ArgumentList @($($SelectedServer, $PortToUse)) | Out-Null
 
     Start-RDP -PortToUse $PortToUse
-}
-
-function Get-Colour { 
-    $ColourList = @{
-        1 = "DarkBlue"
-        2 = "DarkGreen"
-        3 = "DarkCyan"
-        4 = "DarkRed"
-        5 = "DarkMagenta"
-        6 = "DarkYellow"
-        7 = "Blue"
-        8 = "Green"
-        9 = "Cyan"
-        10 = "Red"
-        11 = "Magenta"
-        12 = "Yellow"
-    }
-
-    $Number = Get-Random -Maximum $ColourList.Count -Minimum 1
-    return (($ColourList.GetEnumerator() | Where-Object {$_.Key -eq $Number}).Value)
 }
