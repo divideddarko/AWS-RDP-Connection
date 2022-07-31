@@ -2,7 +2,13 @@
 
 function Test-SettingsJson {
     if (!(Test-Path Settings.json)) { 
-        New-Item -Type File -Name "Settings.json" | Out-Null
+        $DefaultSettings = @()
+
+        $Default = New-Object psobject
+        $Default | Add-Member "NoteProperty" -Name "Previous_Connection_Total" -Value "5"
+        $DefaultSettings += $Default
+
+        $DefaultSettings | ConvertTo-Json | Out-File Settings.json | Out-Null
     }
 }
 
@@ -39,14 +45,8 @@ function Update-Settings {
     if ($oldValue -match $SettingValue) { 
         Write-Host "No changes made value matches old value"
     } else {
-        $Settings | Where-Object {$_.Name -eq $($SettingName)} { 
-            $_.Value = $SettingValue
-        }
+        $Settings.$SettingName = $SettingValue
         $Settings | ConvertTo-Json | Out-File .\Settings.json
-
-
-        # $Settings = $Settings.$SettingName = $($SettingValue)
-        # Write-Host "$($SettingName) updated`nOld: $($oldValue)`nNew: $($SettingValue)"
     }
 }
 
