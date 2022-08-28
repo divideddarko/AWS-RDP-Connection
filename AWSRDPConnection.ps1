@@ -402,8 +402,8 @@ function Write-RDPConnectionFile {
 function Get-RDPConnectionFile {
     [Alias("PAWS")]
     Param()
-    
-    if (Test-Path ".\RDPConnections.json") { 
+
+    if (Test-Path ".\RDPConnections.json") {
         Update-PAWS
         $Connections = (Get-Content .\RDPConnections.json) | ConvertFrom-Json
 
@@ -425,7 +425,8 @@ function Get-RDPConnectionFile {
     }
 }
 
-function Start-PreviousRDPConnection { 
+function Start-PreviousRDPConnection {
+    [CmdletBinding(SupportsShouldProcess)]
     Param (
         [string]$AWSProfile,
         [string]$SelectedServer
